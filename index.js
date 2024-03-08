@@ -1,7 +1,7 @@
 const express = require("express");
 require("dotenv").config();
 const app = express();
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 3000;
 require("./src/database/connect");
 const DeviceData = require("./src/models/deviceData");
 const fs = require("fs");
@@ -39,14 +39,19 @@ app.post("/data", async (req, res) => {
 // -------------------------------------------------------------------
 
 let fetchedData = [];
-
 let dataIndex = 0;
 let currentDate = new Date();
 let lastFetchedHour = currentDate.getHours();
+let allDataFetched = false; // Flag to track if all data has been fetched
 
-const fetchInterval = cron.schedule("*/1 * * * *", async () => {
-  
+const fetchInterval = cron.schedule("*/1 * * * * *", async () => {
   try {
+    if (allDataFetched) {
+      console.log("All data fetched. Stopping the fetch process.");
+      fetchInterval.stop();
+      return;
+    }
+
     const latestData = {};
 
     const item = data[dataIndex];
@@ -83,8 +88,7 @@ const fetchInterval = cron.schedule("*/1 * * * *", async () => {
     fetchedData = fetchedData.concat(fetchedDataChunk);
 
     if (dataIndex === 0) {
-      fetchInterval.stop();
-      console.log("All data fetched. Stopping the fetch process.");
+      allDataFetched = true;
     }
   } catch (error) {
     console.error("Error fetching data:", error);
